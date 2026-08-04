@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HeyGemini</string>
+    <string name="select_google_assistant">请选择 Google 作为默认数字助理应用，设置后再次启动 HeyGemini</string>
+    <string name="assistant_settings_unavailable">无法打开数字助理设置，请在系统设置中手动选择 Google</string>
+</resources>

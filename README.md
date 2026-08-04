@@ -1,39 +1,102 @@
 # HeyGemini
 
-#### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+HeyGemini 是一个为国行 OPPO / ColorOS 制作的极简 Android 启动器。点击图标后，
+它通过系统语音交互接口直接唤起 Gemini 浮层，不显示自己的界面，也不常驻后台。
 
-#### 软件架构
-软件架构说明
+当前版本：`1.6.4`
 
+## 工作方式
 
-#### 安装教程
+1. 检查当前系统数字助理是否为 Google 的 `GsaVoiceInteractionService`。
+2. 如果设置正确，产生一次 60 ms 震动。
+3. 等待 140 ms，让 ColorOS 智慧侧边栏完成收起动画。
+4. 向 Google App 定向发送 `android.intent.action.VOICE_COMMAND`，打开 Gemini 浮层。
+5. 如果 Google 不是默认助理，则打开系统数字助理设置页。
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+应用使用 `Theme.NoDisplay`，不会创建窗口或出现在最近任务中。它没有服务、网络请求、
+统计代码或持久进程，仅申请振动权限。
 
-#### 使用说明
+## 使用条件
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- Google App：`com.google.android.googlequicksearchbox`
+- Gemini 已完成初始化
+- Google 已设为默认数字助理应用
+- ColorOS 首次跨应用启动确认已允许
 
-#### 参与贡献
+可在手机设置中手动选择默认数字助理，也可以在已连接 ADB 时执行：
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+```shell
+adb shell settings put secure assistant \
+  com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService
+adb shell settings put secure voice_interaction_service \
+  com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService
+```
 
+设置完成后，可将 HeyGemini 加入智慧侧边栏或其他支持启动普通应用的快捷入口。
 
-#### 特技
+## 当前参数
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- 侧边栏收起等待：140 ms
+- 启动震动：60 ms，振幅 220
+- 图标：自动适配亮色/暗色主题，前景 inset 为 6%
+- 工程名称与代码命名空间：`HeyGemini` / `dev.heygemini`
+- 应用 ID：`dev.quickgemi`（仅为兼容已经安装的早期版本，后续可直接覆盖升级）
+- 最低 Android 版本：Android 8.0（API 26）
+- 目标 Android 版本：API 36
+
+延迟和震动参数位于：
+
+```text
+app/src/main/java/dev/heygemini/MainActivity.kt
+```
+
+图标缩放参数位于：
+
+```text
+app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+```
+
+## 构建
+
+需要 JDK 17 和 Android SDK。在工程根目录运行：
+
+```shell
+./gradlew clean assembleDebug
+```
+
+生成的 APK 位于：
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+安装到已连接的手机：
+
+```shell
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+## 工程结构
+
+```text
+app/src/main/java/dev/heygemini/MainActivity.kt   唤起、检查、震动与设置回退
+app/src/main/AndroidManifest.xml                  应用声明与振动权限
+app/src/main/res/                                 主题、文字和亮/暗色图标
+artwork/                                          最终图标及可复现所需素材
+```
+
+## 已知边界
+
+- HeyGemini 只是启动入口，不提供“Hey Google”语音唤醒。
+- 它不能绕过 ColorOS 对电源键、左侧快捷键或系统助理的厂商限制。
+- 是否能控制免打扰、手电筒等系统功能，取决于 Gemini、Google App 和系统权限。
+- Google App 必须是系统当前激活的数字助理；小布可以保留安装，但不能同时成为激活的
+  `VoiceInteractionService`。
+- 应用本身不需要在后台运行；系统可能为当前默认助理保留 Google 的语音交互进程。
+
+## 恢复未配置状态
+
+```shell
+adb shell settings delete secure assistant
+adb shell settings delete secure voice_interaction_service
+```
