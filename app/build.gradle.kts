@@ -11,8 +11,8 @@ android {
         applicationId = "dev.quickgemi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.6.4"
+        versionCode = 19
+        versionName = "1.6.6"
     }
 
     buildTypes {

@@ -3,18 +3,19 @@
 HeyGemini 是一个为国行 OPPO / ColorOS 制作的极简 Android 启动器。点击图标后，
 它通过系统语音交互接口直接唤起 Gemini 浮层，不显示自己的界面，也不常驻后台。
 
-当前版本：`1.6.4`
+当前版本：`1.6.6`
 
 ## 工作方式
 
 1. 检查当前系统数字助理是否为 Google 的 `GsaVoiceInteractionService`。
-2. 如果设置正确，产生一次 60 ms 震动。
-3. 等待 140 ms，让 ColorOS 智慧侧边栏完成收起动画。
-4. 向 Google App 定向发送 `android.intent.action.VOICE_COMMAND`，打开 Gemini 浮层。
+2. 无窗口 Activity 启动一个短生命周期 Service 后立即结束。
+3. Service 保持进程约 140 ms，让 ColorOS 智慧侧边栏完成收起动画。
+4. 产生一次 60 ms 震动，紧接着向 Google App 定向发送
+   `android.intent.action.VOICE_COMMAND`，然后 Service 自行停止。
 5. 如果 Google 不是默认助理，则打开系统数字助理设置页。
 
-应用使用 `Theme.NoDisplay`，不会创建窗口或出现在最近任务中。它没有服务、网络请求、
-统计代码或持久进程，仅申请振动权限。
+应用使用 `Theme.NoDisplay`，不会创建窗口或出现在最近任务中。它没有网络请求、统计代码
+或持久进程；短生命周期 Service 每次仅运行约 140 ms，并且仅申请振动权限。
 
 ## 使用条件
 
@@ -56,6 +57,27 @@ app/src/main/java/dev/heygemini/MainActivity.kt
 app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 ```
 
+## 诊断日志
+
+每次触发都会记录默认助理状态、140 ms 回调、震动请求、Intent 解析结果、启动结果及异常。
+日志同时写入 Android Logcat 和应用私有的 64 KB 滚动文件。
+
+读取 Logcat：
+
+```shell
+adb logcat -d -s HeyGemini:I '*:S'
+```
+
+读取持久日志（当前调试版 APK 支持 `run-as`）：
+
+```shell
+adb shell run-as dev.quickgemi cat files/heygemini.log
+```
+
+如果一次点击完全没有产生 `Trigger received`，说明 ColorOS 或快捷入口没有启动
+HeyGemini；如果有该记录但后续失败，则可根据同一组时间戳判断是默认助理、震动还是
+`ACTION_VOICE_COMMAND` 阶段的问题。
+
 ## 构建
 
 需要 JDK 17 和 Android SDK。在工程根目录运行：
@@ -79,7 +101,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## 工程结构
 
 ```text
-app/src/main/java/dev/heygemini/MainActivity.kt   唤起、检查、震动与设置回退
+app/src/main/java/dev/heygemini/MainActivity.kt   无窗口入口
+app/src/main/java/dev/heygemini/GeminiLaunchService.kt  延迟、震动与唤起
+app/src/main/java/dev/heygemini/AssistantSupport.kt     助理检查与设置回退
+app/src/main/java/dev/heygemini/LaunchLogger.kt         Logcat 与滚动日志
 app/src/main/AndroidManifest.xml                  应用声明与振动权限
 app/src/main/res/                                 主题、文字和亮/暗色图标
 artwork/                                          最终图标及可复现所需素材
