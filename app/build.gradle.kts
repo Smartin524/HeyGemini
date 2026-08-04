@@ -8,11 +8,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.quickgemi"
+        applicationId = "dev.heygemini"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.6.6"
+        versionCode = 20
+        versionName = "2.0.0"
     }
 
     buildTypes {

@@ -3,7 +3,7 @@
 HeyGemini 是一个为国行 OPPO / ColorOS 制作的极简 Android 启动器。点击图标后，
 它通过系统语音交互接口直接唤起 Gemini 浮层，不显示自己的界面，也不常驻后台。
 
-当前版本：`1.6.6`
+当前版本：`2.0.0`
 
 ## 工作方式
 
@@ -16,6 +16,11 @@ HeyGemini 是一个为国行 OPPO / ColorOS 制作的极简 Android 启动器。
 
 应用使用 `Theme.NoDisplay`，不会创建窗口或出现在最近任务中。它没有网络请求、统计代码
 或持久进程；短生命周期 Service 每次仅运行约 140 ms，并且仅申请振动权限。
+
+## 2.0 包名迁移
+
+2.0.0 将早期安装包 ID `dev.quickgemi` 完整改为 `dev.heygemini`。Android 会将其视为
+新应用，因此从 1.x 迁移时需要卸载旧包，并把新版 HeyGemini 重新加入智慧侧边栏。
 
 ## 使用条件
 
@@ -40,8 +45,7 @@ adb shell settings put secure voice_interaction_service \
 - 侧边栏收起等待：140 ms
 - 启动震动：60 ms，振幅 220
 - 图标：自动适配亮色/暗色主题，前景 inset 为 6%
-- 工程名称与代码命名空间：`HeyGemini` / `dev.heygemini`
-- 应用 ID：`dev.quickgemi`（仅为兼容已经安装的早期版本，后续可直接覆盖升级）
+- 工程名称、代码命名空间与应用 ID：`HeyGemini` / `dev.heygemini`
 - 最低 Android 版本：Android 8.0（API 26）
 - 目标 Android 版本：API 36
 
@@ -71,7 +75,7 @@ adb logcat -d -s HeyGemini:I '*:S'
 读取持久日志（当前调试版 APK 支持 `run-as`）：
 
 ```shell
-adb shell run-as dev.quickgemi cat files/heygemini.log
+adb shell run-as dev.heygemini cat files/heygemini.log
 ```
 
 如果一次点击完全没有产生 `Trigger received`，说明 ColorOS 或快捷入口没有启动
