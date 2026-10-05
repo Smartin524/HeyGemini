@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="app/src/main/res/drawable-night-xxxhdpi/ic_launcher_art.png">
-    <img src="app/src/main/res/drawable-xxxhdpi/ic_launcher_art.png" width="128" alt="HeyGemini icon">
+    <source media="(prefers-color-scheme: dark)" srcset="artwork/icon-dark.png">
+    <img src="artwork/icon-light.png" width="128" alt="HeyGemini icon">
   </picture>
 
   # HeyGemini

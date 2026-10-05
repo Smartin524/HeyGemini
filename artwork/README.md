@@ -1,13 +1,15 @@
 # 图标素材
 
-- `hey-gemini-light-expanded-540.png`：最终亮色图标资源。
-- `hey-gemini-dark-expanded-540.png`：最终暗色图标资源。
-- `hey-gemini-light-resource-432-backup.png`：亮色原始主体，用于重新调整留白。
-- `hey-gemini-dark-resource-432-backup.png`：暗色原始主体，用于重新合成。
-- `hey-gemini-dark-generated-background.png`：Image 2 生成的无接缝暗色背景。
-- `hey-gemini-dark-star-mask.png`：暗色星形合成蒙版。
+图标由 `generate_icon.py` 用代码生成，所有变体共用同一份几何参数：
 
-最终的 540 × 540 图片复制到
-`app/src/main/res/drawable[-night]-xxxhdpi/ic_launcher_art.png`。Android 根据系统主题
-自动选择普通或 `night` 资源；自适应图标的额外缩放在
-`app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` 中设置。
+- `app/src/main/res/drawable/ic_launcher_foreground.xml`：四角星前景（亮暗共用）。
+- `app/src/main/res/drawable[-night]/ic_launcher_background.xml`：亮色白底；暗色为取自
+  ColorOS 系统图标的中性深灰渐变。
+- `app/src/main/res/drawable/ic_launcher_monochrome.xml`：系统主题图标单色层。
+- `icon-light.png` / `icon-dark.png`：README 预览图。
+
+调整尺寸、颜色或星形后，在项目根目录重新运行：
+
+```bash
+python3 artwork/generate_icon.py
+```
