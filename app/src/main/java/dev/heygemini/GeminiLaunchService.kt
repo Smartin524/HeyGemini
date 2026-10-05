@@ -10,21 +10,18 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.Toast
 
 /** Keeps the process alive only while the ColorOS sidebar finishes its closing animation. */
 class GeminiLaunchService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val assistantInactive = intent?.getBooleanExtra(EXTRA_ASSISTANT_INACTIVE, false) ?: false
         LaunchLogger.log(this, "Launch scheduled in $SIDEBAR_SETTLE_DELAY_MS ms; startId=$startId")
         mainHandler.postDelayed(
             {
-                try {
-                    LaunchLogger.log(this, "Delay elapsed; beginning launch; startId=$startId")
-                    performLaunchHaptic()
-                    launchGemini()
-                } finally {
-                    LaunchLogger.log(this, "Stopping launch service; startId=$startId")
-                    stopSelf(startId)
-                }
+                LaunchLogger.log(this, "Delay elapsed; beginning launch; startId=$startId")
+                scheduleLaunchHaptic(startId)
+                launchGemini(assistantInactive)
             },
             SIDEBAR_SETTLE_DELAY_MS,
         )
@@ -32,6 +29,24 @@ class GeminiLaunchService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun scheduleLaunchHaptic(startId: Int) {
+        LaunchLogger.log(
+            this,
+            "Haptic scheduled in $HAPTIC_AFTER_LAUNCH_DELAY_MS ms; startId=$startId",
+        )
+        mainHandler.postDelayed(
+            {
+                try {
+                    performLaunchHaptic()
+                } finally {
+                    LaunchLogger.log(this, "Stopping launch service; startId=$startId")
+                    stopSelf(startId)
+                }
+            },
+            HAPTIC_AFTER_LAUNCH_DELAY_MS,
+        )
+    }
 
     @Suppress("DEPRECATION")
     private fun performLaunchHaptic() {
@@ -66,7 +81,7 @@ class GeminiLaunchService : Service() {
         }
     }
 
-    private fun launchGemini() {
+    private fun launchGemini(assistantInactive: Boolean) {
         val launchIntent = Intent(Intent.ACTION_VOICE_COMMAND)
             .setPackage(AssistantSupport.GOOGLE_APP_PACKAGE)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -81,16 +96,23 @@ class GeminiLaunchService : Service() {
         try {
             startActivity(launchIntent)
             LaunchLogger.log(this, "Assistant startActivity returned successfully")
+            if (assistantInactive) {
+                // The launch may not show the overlay without a bound service; say how to fix it.
+                Toast.makeText(this, R.string.reselect_google_assistant_hint, Toast.LENGTH_LONG).show()
+            }
         } catch (error: RuntimeException) {
             LaunchLogger.log(this, "Assistant launch failed", error)
-            AssistantSupport.openSettings(this)
+            AssistantSupport.openSettings(this, AssistantSupport.settingsMessage(assistantInactive))
         }
     }
 
-    private companion object {
-        val mainHandler = Handler(Looper.getMainLooper())
-        const val SIDEBAR_SETTLE_DELAY_MS = 140L
-        const val LAUNCH_HAPTIC_DURATION_MS = 60L
-        const val LAUNCH_HAPTIC_AMPLITUDE = 220
+    companion object {
+        const val EXTRA_ASSISTANT_INACTIVE = "dev.heygemini.extra.ASSISTANT_INACTIVE"
+
+        private val mainHandler = Handler(Looper.getMainLooper())
+        private const val SIDEBAR_SETTLE_DELAY_MS = 140L
+        private const val HAPTIC_AFTER_LAUNCH_DELAY_MS = 20L
+        private const val LAUNCH_HAPTIC_DURATION_MS = 60L
+        private const val LAUNCH_HAPTIC_AMPLITUDE = 220
     }
 }

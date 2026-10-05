@@ -28,10 +28,11 @@ Android 系统语音交互接口直接打开 Gemini 浮层，适合放入智慧�
 - 直接唤起 Gemini 浮层，而不是先打开 Google 或 Gemini 主界面
 - 支持 ColorOS 智慧侧边栏等普通应用快捷入口
 - 无窗口、无最近任务卡片、无启动动画
-- 等待 140 ms 后再震动并唤起，避开侧边栏收起动画
+- 等待 140 ms 后唤起 Gemini，再延迟 20 ms 震动，使触感与唤起动画对齐
 - 60 ms 震动反馈
 - 自动适配亮色与暗色图标
-- 默认助理未设置正确时，自动打开数字助理设置页
+- 默认助理不是 Google 时，自动打开数字助理设置页
+- 默认助理是 Google 但其助理服务未运行时，仍尝试唤起，并提示切换到其他助理再切回 Google
 - 提供 Logcat 与应用内滚动日志，方便排查偶发失败
 - 无网络请求、无统计代码，仅申请振动权限
 
@@ -58,23 +59,28 @@ Android 系统语音交互接口直接打开 Gemini 浮层，适合放入智慧�
 4. 首次启动 HeyGemini 时，允许 ColorOS 的跨应用启动确认。
 5. 将 HeyGemini 加入智慧侧边栏。
 
-也可以在已连接 ADB 时设置默认助理：
+请优先通过系统设置界面选择 Google。直接写入 `secure assistant` 并不总会同步 Android 的
+Assistant Role，可能造成“设置值是 Google，但实际角色仍属于其他助理”的冲突。
+
+排查已连接 ADB 的设备时，可以同时检查三项：
 
 ```shell
-adb shell settings put secure assistant \
-  com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService
-adb shell settings put secure voice_interaction_service \
-  com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService
+adb shell cmd role get-role-holders --user 0 android.app.role.ASSISTANT
+adb shell settings get secure assistant
+adb shell settings get secure voice_interaction_service
 ```
+
+三项都应指向 Google。若 Role 不一致，请回到系统的“默认应用 / 数字助理应用”重新选择
+Google；不要只修改后两项设置值。
 
 ## 工作原理
 
-1. 无窗口 Activity 检查当前系统助理是否为 Google。
+1. 无窗口 Activity 检查 Google 是否为默认助理，以及其助理服务是否正在运行（按包名匹配，不依赖服务类名）。
 2. Activity 启动一个短生命周期 Service 后立即结束。
 3. Service 等待 140 ms，让 ColorOS 智慧侧边栏完成收起动画。
-4. Service 产生一次 60 ms 震动。
-5. 向 Google App 定向发送 `android.intent.action.VOICE_COMMAND`。
-6. Gemini 浮层启动后，Service 立即停止。
+4. 向 Google App 定向发送 `android.intent.action.VOICE_COMMAND`。
+5. 再等待 20 ms，产生一次 60 ms 震动。
+6. Service 立即停止。
 
 短生命周期 Service 每次仅运行约 140 ms，不会常驻后台。
 
@@ -88,7 +94,7 @@ adb shell settings put secure voice_interaction_service \
 adb logcat -d -s HeyGemini:I '*:S'
 ```
 
-读取应用内的 64 KB 滚动日志（调试版 APK）：
+读取应用内的 64 KB 滚动日志（超出时保留较新的一半）（调试版 APK）：
 
 ```shell
 adb shell run-as dev.heygemini cat files/heygemini.log
@@ -126,6 +132,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - 最低版本：Android 8.0（API 26）
 - 目标版本：API 36
 - 侧边栏等待：140 ms
+- 唤起后震动等待：20 ms
 - 震动：60 ms，振幅 220
 - 图标前景 inset：6%
 

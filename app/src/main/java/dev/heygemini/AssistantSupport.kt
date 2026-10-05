@@ -10,16 +10,33 @@ import android.widget.Toast
 object AssistantSupport {
     const val GOOGLE_APP_PACKAGE = "com.google.android.googlequicksearchbox"
 
-    private val googleAssistantService = ComponentName(
-        GOOGLE_APP_PACKAGE,
-        "com.google.android.voiceinteraction.GsaVoiceInteractionService",
-    )
+    enum class State {
+        /** Google's voice interaction service is bound and running. */
+        ACTIVE,
 
-    fun isGoogleAssistantActive(context: Context): Boolean = try {
-        VoiceInteractionService.isActiveService(context, googleAssistantService)
-    } catch (error: RuntimeException) {
-        LaunchLogger.log(context, "Unable to inspect the active assistant", error)
-        false
+        /** Google is the selected assistant, but no voice interaction service is running. */
+        SELECTED_BUT_INACTIVE,
+
+        /** Another assistant, or none, is selected. */
+        NOT_SELECTED,
+    }
+
+    /**
+     * Matches Google by package rather than a hard-coded service class, so a renamed
+     * VoiceInteractionService in a future Google App release keeps working.
+     */
+    fun googleAssistantState(context: Context): State {
+        val voiceInteraction = secureComponent(context, VOICE_INTERACTION_SETTING)
+        if (voiceInteraction?.packageName == GOOGLE_APP_PACKAGE && isActive(context, voiceInteraction)) {
+            return State.ACTIVE
+        }
+
+        val assistant = secureComponent(context, ASSISTANT_SETTING)
+        return if (assistant?.packageName == GOOGLE_APP_PACKAGE) {
+            State.SELECTED_BUT_INACTIVE
+        } else {
+            State.NOT_SELECTED
+        }
     }
 
     fun settingsSummary(context: Context): String {
@@ -28,7 +45,10 @@ object AssistantSupport {
         return "assistant=$assistant; voiceInteraction=$voiceInteraction"
     }
 
-    fun openSettings(context: Context) {
+    fun settingsMessage(assistantInactive: Boolean): Int =
+        if (assistantInactive) R.string.reselect_google_assistant else R.string.select_google_assistant
+
+    fun openSettings(context: Context, messageRes: Int) {
         val settingsIntents = listOf(
             Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
             Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
@@ -38,11 +58,7 @@ object AssistantSupport {
         for (intent in settingsIntents) {
             try {
                 context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                Toast.makeText(
-                    context,
-                    R.string.select_google_assistant,
-                    Toast.LENGTH_LONG,
-                ).show()
+                Toast.makeText(context, messageRes, Toast.LENGTH_LONG).show()
                 LaunchLogger.log(context, "Opened assistant settings via ${intent.action}")
                 return
             } catch (error: RuntimeException) {
@@ -62,8 +78,21 @@ object AssistantSupport {
         LaunchLogger.log(context, "All assistant settings destinations failed")
     }
 
+    private fun isActive(context: Context, service: ComponentName): Boolean = try {
+        VoiceInteractionService.isActiveService(context, service)
+    } catch (error: RuntimeException) {
+        LaunchLogger.log(context, "Unable to inspect the active assistant", error)
+        false
+    }
+
+    private fun secureComponent(context: Context, name: String): ComponentName? =
+        Settings.Secure.getString(context.contentResolver, name)
+            ?.let(ComponentName::unflattenFromString)
+
     private fun secureSetting(context: Context, name: String): String =
-        Settings.Secure.getString(context.contentResolver, name) ?: "<unset>"
+        Settings.Secure.getString(context.contentResolver, name)
+            ?.takeIf { it.isNotEmpty() }
+            ?: "<unset>"
 
     private const val ASSISTANT_SETTING = "assistant"
     private const val VOICE_INTERACTION_SETTING = "voice_interaction_service"

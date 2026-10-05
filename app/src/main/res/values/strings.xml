@@ -2,5 +2,7 @@
 <resources>
     <string name="app_name">HeyGemini</string>
     <string name="select_google_assistant">请选择 Google 作为默认数字助理应用，设置后再次启动 HeyGemini</string>
+    <string name="reselect_google_assistant">Google 已是默认数字助理，但助理服务未运行。请先切换到其他助理，再切回 Google</string>
+    <string name="reselect_google_assistant_hint">Google 助理服务未运行。若 Gemini 没有出现，请在数字助理设置中切换到其他助理，再切回 Google</string>
     <string name="assistant_settings_unavailable">无法打开数字助理设置，请在系统设置中手动选择 Google</string>
 </resources>

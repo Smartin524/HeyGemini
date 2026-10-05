@@ -16,7 +16,7 @@ object LaunchLogger {
         try {
             val logFile = File(context.filesDir, LOG_FILE_NAME)
             if (logFile.length() >= MAX_LOG_FILE_BYTES) {
-                logFile.writeText("")
+                trimToRecentHalf(logFile)
             }
             val errorSummary = error?.let {
                 "; ${it.javaClass.simpleName}: ${it.message ?: "<no message>"}"
@@ -25,6 +25,13 @@ object LaunchLogger {
         } catch (logError: Exception) {
             Log.e(LOG_TAG, "Unable to write persistent launch log", logError)
         }
+    }
+
+    /** Keeps the newer half so the entries just before a failure survive a rollover. */
+    private fun trimToRecentHalf(logFile: File) {
+        val text = logFile.readText()
+        val tail = text.takeLast((MAX_LOG_FILE_BYTES / 2).toInt())
+        logFile.writeText(tail.substringAfter('\n', ""))
     }
 
     private const val LOG_TAG = "HeyGemini"
